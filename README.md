@@ -24,9 +24,10 @@
 
 ### 方式一:直接下载(推荐,免装环境)
 
-去 [Releases](../../releases) 下载对应架构的 `.dmg`:
-- Apple Silicon(M1/M2/M3)→ `中转API测试-1.0.0-arm64.dmg`
-- Intel Mac → 用源码自行打包(见下)
+去 [Releases](../../releases/latest) 下载对应架构的安装包:
+- Apple Silicon(M1/M2/M3/M4)→ `API-Tester-1.0.0-arm64.dmg`
+- Intel Mac → 用源码自行打包(见下,`npx electron-builder --mac --x64`)
+- Windows → 本次未提供预编译 exe,在 Windows 机器上 clone 后跑 `npm install && npm run build:win` 生成 portable exe
 
 打开 dmg,把「中转API测试」拖到「应用程序」文件夹。**首次打开会被 macOS 拦**(应用未签名),处理方式:
 - 右键点 app → 选「打开」→ 确认对话框再点「打开」
