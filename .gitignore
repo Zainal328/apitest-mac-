@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+# 本地历史记录文件(含测试时的 url/model,可能敏感)
+.api-speed-tester-history.json
+# 打包临时文件
+*.blockmap
+builder-debug.yml

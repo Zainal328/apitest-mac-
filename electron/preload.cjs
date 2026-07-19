@@ -1,0 +1,1 @@
+// Preload for Electron — minimal, just keep contextIsolation isolation true

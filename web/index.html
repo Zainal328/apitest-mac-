@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>中转 API 全面测试</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b1120;color:#e2e8f0;min-height:100vh}
+main{max-width:1080px;margin:auto;padding:28px 20px}h1{font-size:24px;margin-bottom:6px}.sub{color:#94a3b8;font-size:13px;margin-bottom:18px}
+.card{background:#111827;border:1px solid #334155;border-radius:12px;padding:18px;margin:14px 0}
+label{display:block;color:#94a3b8;font-size:13px;margin:11px 0 5px}
+input,textarea{width:100%;padding:11px 12px;border:1px solid #475569;border-radius:8px;background:#0b1220;color:#e2e8f0;font-size:14px}
+input:focus,textarea:focus{outline:2px solid #2563eb;border-color:transparent}
+button{padding:11px 16px;border:0;border-radius:8px;background:#2563eb;color:white;font-size:14px;font-weight:600;cursor:pointer}
+button:hover{background:#1d4ed8}button:disabled{background:#475569;cursor:wait}
+button.secondary{background:#475569}
+button.secondary:hover{background:#64748b}
+button.danger{background:#991b1b}
+button.danger:hover{background:#b91c1c}
+button.small{padding:6px 10px;font-size:12px}
+.hint{font-size:12px;color:#64748b;margin-top:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin:12px 0}
+.box{background:#0b1220;border-radius:8px;padding:12px}
+.box .label{font-size:12px;color:#94a3b8}
+.box .value{font-size:21px;font-weight:700;margin-top:4px}
+.box .small{font-size:11px;color:#64748b;margin-top:3px}
+.section-title{font-size:16px;margin:18px 0 8px;border-bottom:1px solid #334155;padding-bottom:8px}
+.status{padding:10px;border-radius:8px;background:#172033;color:#93c5fd;margin-top:10px}
+.warn{padding:9px 11px;background:#451a03;color:#fed7aa;border-radius:7px;font-size:13px;margin:5px 0}
+.good{padding:9px 11px;background:#052e16;color:#bbf7d0;border-radius:7px;font-size:13px;margin:5px 0}
+.report{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.report button{margin:0}
+pre{white-space:pre-wrap;word-break:break-word;background:#020617;border-radius:8px;padding:12px;font-size:12px;max-height:420px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.two{grid-template-columns:1fr}}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid #334155}
+.tab{padding:10px 18px;background:transparent;border:0;color:#94a3b8;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin:0}
+.tab.active{color:#e2e8f0;border-bottom-color:#2563eb}
+.tab:hover{color:#e2e8f0}
+.tabPanel{display:none}
+.tabPanel.active{display:block}
+
+/* History list */
+.historyItem{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s}
+.historyItem:hover{border-color:#475569;background:#111827}
+.historyItem.selected{border-color:#2563eb;background:#111827}
+.hiHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hiTitle{font-weight:600;font-size:14px}
+.hiTime{font-size:11px;color:#94a3b8}
+.hiBadge{padding:2px 7px;border-radius:4px;font-size:11px;margin-right:4px}
+.hiBadgeGood{background:#052e16;color:#86efac}
+.hiBadgeWarn{background:#451a03;color:#fed7aa}
+.hiBadgeBad{background:#7f1d1d;color:#fca5a5}
+.hiMetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;font-size:12px}
+.hiMetric{background:#020617;padding:6px 8px;border-radius:6px}
+.hiMetricLabel{color:#64748b;font-size:10px}
+.hiMetricValue{font-weight:600;margin-top:2px}
+.hiActions{margin-top:8px;display:flex;gap:6px}
+.hiActions button{padding:5px 9px;font-size:11px;margin:0}
+
+.empty{text-align:center;color:#64748b;padding:30px 20px}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50;padding:20px;overflow:auto}
+.modal.open{display:flex;align-items:flex-start;justify-content:center}
+.modalContent{background:#0b1120;border:1px solid #334155;border-radius:12px;padding:24px;max-width:900px;width:100%;margin:20px auto;max-height:90vh;overflow:auto}
+.modalClose{float:right;background:transparent;color:#94a3b8;font-size:22px;border:0;cursor:pointer;padding:0 8px}
+.modalClose:hover{color:#e2e8f0}
+.modal h3{margin-top:6px;margin-bottom:12px}
+
+.compareRow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.compareCol{background:#0b1220;border-radius:10px;padding:14px}
+.compareCol h4{font-size:13px;margin-bottom:8px;color:#94a3b8}
+.compareMetric{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e293b}
+.compareMetric.bad{color:#fca5a5}
+.compareMetric.good{color:#86efac}
+
+/* === 总览卡 & 维度卡 === */
+.pasteBox{background:#0b1220;border:1px dashed #334155;border-radius:10px;padding:12px;margin-bottom:12px}
+.pasteBox textarea{width:100%;min-height:64px;resize:vertical;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.pasteHint{font-size:12px;color:#64748b;margin-top:6px}
+.pasteActions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.pasteResult{font-size:12px;margin-top:8px;padding:8px 10px;border-radius:7px;background:#020617;min-height:18px}
+.pasteResult.ok{color:#86efac}
+.pasteResult.warn{color:#fed7aa}
+.scanBadge{display:inline-block;background:#1e293b;color:#93c5fd;padding:2px 6px;border-radius:4px;margin-right:6px;font-size:11px}
+
+.overview{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;background:linear-gradient(135deg,#0b1220,#111827);border:1px solid #334155;border-radius:14px;padding:22px;margin:14px 0}
+.scoreRing{width:120px;height:120px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:38px;font-weight:800;flex-shrink:0}
+.scoreRing.good{background:radial-gradient(circle,#052e16,#052e16);border:3px solid #16a34a;color:#86efac}
+.scoreRing.warn{background:radial-gradient(circle,#451a03,#451a03);border:3px solid #ea580c;color:#fed7aa}
+.scoreRing.bad{background:radial-gradient(circle,#450a0a,#450a0a);border:3px solid #dc2626;color:#fca5a5}
+.scoreRing.none{background:#0b1220;border:3px solid #475569;color:#94a3b8}
+.scoreRing small{font-size:12px;font-weight:500;margin-top:2px;opacity:.9}
+.overviewMeta{min-width:0}
+.overviewTag{display:inline-block;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:10px}
+.overviewTag.good{background:#052e16;color:#86efac}
+.overviewTag.warn{background:#451a03;color:#fed7aa}
+.overviewTag.bad{background:#450a0a;color:#fca5a5}
+.overviewVerdict{font-size:14px;line-height:1.65;color:#cbd5e1}
+.overviewVerdict b{color:#e2e8f0}
+
+.dimGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:12px 0}
+.dimCard{background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:12px;position:relative}
+.dimCard.good{border-color:#15803d}
+.dimCard.warn{border-color:#c2410c}
+.dimCard.bad{border-color:#b91c1c}
+.dimCard.none{opacity:.55}
+.dimHead{display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8}
+.dimIcon{font-size:15px}
+.dimName{font-weight:600}
+.dimValue{font-size:20px;font-weight:700;margin-top:6px}
+.dimLabel{font-size:11px;margin-top:3px;padding:2px 7px;border-radius:4px;display:inline-block}
+.dimLabel.good{background:#052e16;color:#86efac}
+.dimLabel.warn{background:#451a03;color:#fed7aa}
+.dimLabel.bad{background:#450a0a;color:#fca5a5}
+.dimLabel.none{background:#1e293b;color:#64748b}
+
+/* 折叠区 */
+details.raw{margin-top:10px}
+details.raw summary{cursor:pointer;color:#94a3b8;font-size:13px;padding:8px 0;user-select:none}
+details.raw summary:hover{color:#e2e8f0}
+details.raw[open] summary{margin-bottom:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>中转 API 全面测试工具</h1>
+<p class="sub">只需填写 Base URL、API Key 和模型 ID，自动测试速度、真实流式、Token 用量和智能化表现。</p>
+
+<div class="tabs">
+<button class="tab active" data-tab="run">测试</button>
+<button class="tab" data-tab="history">历史报告 (<span id="histCount">0</span>)</button>
+</div>
+
+<div id="runPanel" class="tabPanel active">
+<div class="card">
+<div class="pasteBox">
+<label style="margin-top:0">一键粘贴识别（推荐）</label>
+<textarea id="pasteArea" placeholder="把服务商给你的任意文本粘进来，例如：&#10;Base URL: https://api.xxx.com/v1&#10;API Key: sk-abc123...&#10;模型: gpt-4o&#10;&#10;也支持一段乱序文本，会自动提取 URL / Key / 模型 ID。"></textarea>
+<div class="pasteHint">支持中英文混排、带标签(label:)或纯文本，自动提取 URL、sk- 开头 Key、模型 ID。Ctrl/Cmd+Enter 也可识别。</div>
+<div class="pasteActions">
+<button id="pasteScan" class="small">识别并填充</button>
+<button id="pasteClear" class="small secondary">清空</button>
+</div>
+<div id="pasteResult" class="pasteResult">把文本粘贴到上方，点「识别并填充」。</div>
+</div>
+
+<label>Base URL</label>
+<input id="url" placeholder="https://example.com/v1" value="https://mimimax.cn/v1" />
+<div class="hint">支持填写带或不带 /v1，系统会自动补全 /chat/completions。</div>
+<label>API Key</label>
+<input id="key" type="password" placeholder="sk-xxxxxxxx" />
+<label>智能大模型 ID</label>
+<input id="model" placeholder="MiniMax-M3" value="MiniMax-M3" />
+<div class="hint">例如：MiniMax-M3、glm-5.2。请填写服务商实际提供的模型 ID。</div>
+<button id="run">开始完整测试</button>
+<div id="status"></div>
+</div>
+
+<div class="card" id="reportCard" style="display:none">
+<div id="overview"></div>
+
+<h2 class="section-title">各项指标明细</h2>
+<div class="dimGrid" id="dims"></div>
+<div id="warnings"></div>
+
+<h2 class="section-title">智能化测试（水桶问题）</h2>
+<div class="two"><div><div class="box"><div class="label">水桶问题得分</div><div class="value" id="intelScore">-</div><div class="small" id="intelTime"></div></div></div><pre id="intelText">-</pre></div>
+
+<h2 class="section-title">并发稳定性</h2><div id="concurrencyBox" class="hint">未测试</div>
+<h2 class="section-title">偷工减料检测</h2><div id="cornerBox" class="hint">未测试</div>
+<h2 class="section-title">上下文长度支持</h2><div id="contextBox" class="hint">未测试</div>
+<h2 class="section-title">Token 用量真实性</h2><div id="usageBox" class="hint">未测试</div>
+
+<h2 class="section-title">模型与数据判断</h2>
+<div id="judgement"></div>
+<div class="report"><button id="download">下载 JSON 报告</button><button id="copy" class="secondary">复制测试摘要</button><button id="aiEvaluate" class="secondary">由 AI 点评此报告</button></div>
+<h2 class="section-title">AI 点评</h2><div id="aiEvalResult"><div class="hint">点击上方「由 AI 点评此报告」可让另一个大模型以自然语言解读这份测试数据。需要填写一个点评用的 API。</div></div>
+<details class="raw"><summary>展开详细原始数据（JSON）</summary><pre id="raw"></pre></details>
+</div>
+</div>
+
+<div id="historyPanel" class="tabPanel">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h2 class="section-title" style="margin:0;border:0;padding:0">历史测试记录</h2>
+<div style="display:flex;gap:8px">
+<button id="compareBtn" class="small secondary" disabled>对比选中 (0)</button>
+<button id="refreshHist" class="small secondary">刷新</button>
+<button id="clearHist" class="small danger">清空全部</button>
+</div>
+</div>
+<div id="hint" class="hint" style="margin-bottom:12px">每条测试完成后会自动保存到这里，最多保留 50 条。可勾选 2 条进行对比。</div>
+<div id="historyList"></div>
+</div>
+</div>
+
+<div id="modal" class="modal">
+<div class="modalContent">
+<button class="modalClose" id="modalClose">×</button>
+<div id="modalBody"></div>
+</div>
+</div>
+</main>
+<script>
+(function(){
+var el=function(id){return document.getElementById(id)};
+var last=null;
+var selectedHistory=new Set();
+
+function fmt(v){return typeof v==='number'?v.toLocaleString('zh-CN',{maximumFractionDigits:1}):'-'}
+function stat(label,value,small){return '<div class="box"><div class="label">'+label+'</div><div class="value">'+value+'</div><div class="small">'+(small||'')+'</div></div>'}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]})}
+function fmtTime(iso){try{var d=new Date(iso);return d.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'})}catch(e){return iso}}
+function modelShort(m){return String(m||'').length>40?String(m).slice(0,40)+'...':m||''}
+function urlShort(u){try{return new URL(u).hostname}catch(e){return u||''}}
+
+function buildSummary(d){
+ var a=d.analysis||{},sc=a.scorecard||{};
+ // 总览卡
+ var ringCls=sc.total>=85?'good':(sc.total>=65?'warn':(sc.total>=40?'warn':'bad'));
+ if(sc.total==null||isNaN(sc.total))ringCls='none';
+ var tag=sc.grade||{};
+ var overview='<div class="overview"><div class="scoreRing '+ringCls+'">'+(sc.total!=null&&!isNaN(sc.total)?sc.total:'-')+'<small>/100</small></div><div class="overviewMeta">';
+ overview+='<span class="overviewTag '+(tag.color||'none')+'">'+(tag.tag||'未评分')+'</span>';
+ overview+='<div class="overviewVerdict">'+(sc.verdict?escapeHtml(sc.verdict):'')+'</div>';
+ overview+='</div></div>';
+ el('overview').innerHTML=overview;
+
+ // 各维度卡
+ var dimsHtml='';
+ (sc.dims||[]).forEach(function(dim){
+  dimsHtml+='<div class="dimCard '+dim.level+'">'
+   +'<div class="dimHead"><span class="dimIcon">'+dim.icon+'</span><span class="dimName">'+escapeHtml(dim.name)+'</span></div>'
+   +'<div class="dimValue">'+escapeHtml(dim.rawLabel!=null?dim.rawLabel:'-')+'</div>'
+   +'<span class="dimLabel '+dim.level+'">'+escapeHtml(dim.label||'-')+'</span>'
+   +'</div>';
+ });
+ el('dims').innerHTML=dimsHtml;
+
+ // 异常
+ var warnings='';
+ (a.anomalies||[]).forEach(function(x){warnings+='<div class="warn">'+escapeHtml(x)+'</div>'});
+ if(!warnings)warnings='<div class="good">未发现明显的伪流式或缓存异常（这不是绝对保证）。</div>';
+ el('warnings').innerHTML=warnings;
+
+ // 智能化
+ var intel=a.intelResult||{};
+ el('intelScore').textContent=intel.score!=null?intel.score+' / 100':'-';
+ el('intelTime').textContent='响应耗时 '+fmt(a.intelTime)+' ms；命中 '+(intel.passed||[]).join('、');
+ el('intelText').textContent=d.intel&&d.intel.responseText||'无返回内容';
+
+ // 并发
+ var cc=a.concurrency;
+ if(cc){
+  el('concurrencyBox').innerHTML='<div class="box"><div class="label">并发成功率</div><div class="value">'+Math.round(cc.successRate*100)+'%</div><div class="small">'+cc.successCount+'/'+cc.totalRequests+' 次；墙时间 '+fmt(cc.wallTime)+' ms'+(cc.ttlJitter!=null?'；抖动 '+cc.ttlJitter+'ms':'')+'</div></div>';
+ }else{el('concurrencyBox').innerHTML='<div class="hint">未测试或失败</div>'}
+
+ // 偷工减料
+ var cc2=a.cornerCutting;
+ if(cc2){
+  var h='<div class="box"><div class="label">检查通过率</div><div class="value">'+cc2.passed+'/'+cc2.total+'</div><div class="small">';
+  cc2.checks.forEach(function(c){h+=c.ok?'✅ ':'❌ ';h+=escapeHtml(c.name)+'<br>'});
+  h+='</div></div>';
+  el('cornerBox').innerHTML=h;
+ }else{el('cornerBox').innerHTML='<div class="hint">未测试或失败</div>'}
+
+ // 上下文长度
+ var ctx=a.contextLength;
+ if(ctx){
+  var ch='<div class="box"><div class="label">最大支持长度</div><div class="value">'+escapeHtml(ctx.maxSupportedTier||'不支持')+'</div><div class="small">';
+  (ctx.tiers||[]).forEach(function(t){ch+=escapeHtml(t.tier)+' → '+(t.rejected?'❌拒绝':(t.recalled?'✅可取回':'⚠️未取回'));ch+='<br>'});
+  ch+='</div></div>';
+  el('contextBox').innerHTML=ch;
+ }else{el('contextBox').innerHTML='<div class="hint">未测试或失败</div>'}
+
+ // Token 用量
+ var us=a.usage;
+ if(us){
+  var uh='<div class="box"><div class="label">usage 字段</div><div class="value">'+(us.available?'有':'无')+'</div><div class="small">';
+  if(us.detail&&us.detail.reported){uh+='上报 prompt_tokens='+us.detail.reported.prompt_tokens+'，completion='+us.detail.reported.completion_tokens+'，total='+us.detail.reported.total_tokens}
+  if(us.anomalies&&us.anomalies.length){uh+='<br>'+us.anomalies.map(escapeHtml).join('<br>')}
+  uh+='</div></div>';
+  el('usageBox').innerHTML=uh;
+ }else{el('usageBox').innerHTML='<div class="hint">未测试或失败</div>'}
+
+ // 判断
+ var j='<div class="good">HTTP 状态：'+((d.stream&&d.stream.status)||'-')+'；识别类型：'+(a.modelType||'未知')+'</div>';
+ if(a.hasThinkTags)j+='<div class="status">检测到 &lt;think&gt; 标签：该接口返回了推理过程标记，智能化结果需要结合最终答案人工复核。</div>';
+ j+='<div class="status">注意：Token/s 是根据响应文本估算的速度，不等同于服务商内部真实 tokenizer 计数。官方统计面板必须通过账单、请求日志或 usage 字段独立核验。</div>';
+ el('judgement').innerHTML=j;
+ el('raw').textContent=JSON.stringify(d,null,2);
+ el('reportCard').style.display='block';
+}
+
+// === 一键粘贴识别 ===
+function scanPaste(text){
+ var result={url:null,key:null,model:null};
+ if(!text||!text.trim())return result;
+ var urlM=text.match(/https?:\/\/[^\s一-鿿　-〿<>"']+/i);
+ if(urlM)result.url=urlM[0].replace(/[，,。;；]$/,'');
+ var keyM=text.match(/\bsk[-_][A-Za-z0-9_-]{16,}\b/);
+ if(keyM)result.key=keyM[0];
+ else{
+  var lbl=text.match(/(?:api[\s_]*key|密钥|key|token)\s*[:：=]\s*([A-Za-z0-9_-]{20,})/i);
+  if(lbl)result.key=lbl[1];
+ }
+ var modelM=text.match(/(?:模型|model|model[\s_]*id|模型[\s_]*id)\s*[:：=]\s*([^\s,，;；\n\r]{2,60})/i);
+ if(modelM)result.model=modelM[1].replace(/["'<>]/g,'');
+ else{
+  var cand=text.match(/\b([A-Za-z][A-Za-z0-9._-]*(?:-[A-Za-z0-9]+){1,4})\b/g);
+  if(cand){
+   var pick=cand.find(function(c){return c.length>=3&&c.length<=40&&!/^https?$/i.test(c)&&!/^sk-/i.test(c)&&!/^(com|cn|net|org|io|ai)$/i.test(c)});
+   if(pick)result.model=pick;
+  }
+ }
+ return result;
+}
+function applyScan(){
+ var text=el('pasteArea').value;
+ var r=scanPaste(text);
+ var parts=[];
+ if(r.url){el('url').value=r.url;parts.push('<span class="scanBadge">URL</span>'+escapeHtml(r.url))}
+ if(r.key){el('key').value=r.key;parts.push('<span class="scanBadge">Key</span>'+escapeHtml(r.key.slice(0,8)+'...'+r.key.slice(-4)))}
+ if(r.model){el('model').value=r.model;parts.push('<span class="scanBadge">模型</span>'+escapeHtml(r.model))}
+ var box=el('pasteResult');
+ if(parts.length){box.className='pasteResult ok';box.innerHTML='已识别 '+parts.length+' 项：'+parts.join(' ')}
+ else{box.className='pasteResult warn';box.innerHTML='未识别到 URL / Key / 模型，请检查文本或手动填写。'}
+}
+el('pasteScan').addEventListener('click',applyScan);
+el('pasteClear').addEventListener('click',function(){el('pasteArea').value='';el('pasteResult').className='pasteResult';el('pasteResult').innerHTML='把文本粘贴到上方，点「识别并填充」。'});
+el('pasteArea').addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();applyScan()}});
+
+// Tabs
+document.querySelectorAll('.tab').forEach(function(t){
+ t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+  document.querySelectorAll('.tabPanel').forEach(function(x){x.classList.remove('active')});
+  t.classList.add('active');
+  el(t.dataset.tab+'Panel').classList.add('active');
+  if(t.dataset.tab==='history') loadHistory();
+ });
+});
+
+// Run test
+el('run').addEventListener('click',function(){
+ var url=el('url').value.trim(),key=el('key').value.trim(),model=el('model').value.trim();
+ if(!url||!key||!model){el('status').innerHTML='<div class="warn">请填写 Base URL、API Key 和模型 ID。</div>';return}
+ el('run').disabled=true;
+ el('status').innerHTML='<div class="status">正在执行 9 组测试：短请求、长文本流式/非流式、智能化、重复缓存、并发稳定性、偷工减料、上下文长度、Token用量。预计需要 2-5 分钟。</div>';
+ el('reportCard').style.display='none';
+ fetch('/api/comprehensive-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,key:key,model:model})})
+ .then(function(r){return r.json()})
+ .then(function(d){last=d;if(d.error)throw new Error(d.error);buildSummary(d);el('status').innerHTML='<div class="good">测试完成。报告已自动保存到历史记录。</div>';loadHistory()})
+ .catch(function(e){el('status').innerHTML='<div class="warn">测试失败：'+escapeHtml(e.message)+'</div>'})
+ .finally(function(){el('run').disabled=false})
+});
+
+el('download').addEventListener('click',function(){if(!last)return;var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='api-test-'+Date.now()+'.json';a.click();URL.revokeObjectURL(a.href)});
+el('copy').addEventListener('click',function(){if(!last)return;var a=last.analysis||{},sc=a.scorecard||{};var text='API测试报告\n模型: '+el('model').value+'\n综合评分: '+(sc.total!=null?sc.total:'/100')+' ('+((sc.grade||{}).tag||'')+')\n结论: '+(sc.verdict||'')+'\n\n流式TTFB: '+fmt(a.streamTtfb)+' ms\n流式Token/s: '+fmt(a.streamTps)+'\n流式总耗时: '+fmt(a.streamTotal)+' ms\n非流式总耗时: '+fmt(a.longTime)+' ms\n智能化得分: '+fmt(a.intelResult&&a.intelResult.score)+'/100\n并发成功率: '+(a.concurrency?Math.round(a.concurrency.successRate*100)+'%':'-')+'\n偷工减料: '+(a.cornerCutting?a.cornerCutting.passed+'/'+a.cornerCutting.total:'-')+'\n上下文: '+((a.contextLength||{}).maxSupportedTier||'-')+'\n用量字段: '+((a.usage||{}).available?'有':'无')+'\n异常: '+(a.anomalies||[]).join('；');navigator.clipboard.writeText(text).then(function(){el('copy').textContent='已复制'})});
+el('aiEvaluate').addEventListener('click',function(){
+ if(!last)return;
+ requestEvaluation(last,el('aiEvalResult'))
+});
+
+function severityBadge(record){
+ var s=record.summary||{},badges=[];
+ var sc=s.scorecard||{};
+ if(sc.total!=null){
+  var cls=sc.total>=85?'hiBadgeGood':(sc.total>=65?'hiBadgeWarn':(sc.total>=40?'hiBadgeWarn':'hiBadgeBad'));
+  badges.push('<span class="hiBadge '+cls+'">综合 '+sc.total+' 分</span>');
+ }
+ if(s.anomalies&&s.anomalies.length)badges.push('<span class="hiBadge hiBadgeBad">'+s.anomalies.length+' 个异常</span>');
+ if(s.repeatIdenticalRate>50)badges.push('<span class="hiBadge hiBadgeWarn">缓存 '+s.repeatIdenticalRate+'%</span>');
+ if(s.streamTps!=null&&s.streamTps>0&&s.streamWindow>100)badges.push('<span class="hiBadge hiBadgeGood">真实流式</span>');
+ if(s.streamWindow!==undefined&&s.streamWindow!==null&&s.streamWindow<100&&s.streamChunks>3)badges.push('<span class="hiBadge hiBadgeWarn">伪流式</span>');
+ if(s.intelScore!=null&&s.intelScore>=80)badges.push('<span class="hiBadge hiBadgeGood">智能 '+s.intelScore+'</span>');
+ return badges.join('');
+}
+
+function renderHistory(items){
+ var list=el('historyList');
+ if(!items.length){list.innerHTML='<div class="empty">暂无历史记录。运行一次测试后会自动显示在这里。</div>';el('histCount').textContent=0;return}
+ el('histCount').textContent=items.length;
+ var html='';
+ items.forEach(function(r){
+  var s=r.summary||{};
+  var isSel=selectedHistory.has(r.id);
+  html+='<div class="historyItem '+isSel+' : ""\')" data-id="'+r.id+'">';
+  html+='<div class="hiHeader"><div class="hiTitle">'+escapeHtml(modelShort(r.model))+' <span style="color:#94a3b8;font-weight:400;font-size:12px">@ '+escapeHtml(urlShort(r.url))+'</span></div><div class="hiTime">'+fmtTime(r.timestamp)+'</div></div>';
+  html+='<div style="margin:6px 0">'+severityBadge(r)+'</div>';
+  html+='<div class="hiMetrics">';
+  if(s.streamTtfb!=null)html+='<div class="hiMetric"><div class="hiMetricLabel">TTFB</div><div class="hiMetricValue">'+fmt(s.streamTtfb)+' ms</div></div>';
+  if(s.streamTps!=null)html+='<div class="hiMetric"><div class="hiMetricLabel">Token/s</div><div class="hiMetricValue">'+fmt(s.streamTps)+'</div></div>';
+  if(s.streamTotal!=null)html+='<div class="hiMetric"><div class="hiMetricLabel">流式总耗时</div><div class="hiMetricValue">'+fmt(s.streamTotal)+' ms</div></div>';
+  if(s.longTime!=null)html+='<div class="hiMetric"><div class="hiMetricLabel">非流式</div><div class="hiMetricValue">'+fmt(s.longTime)+' ms</div></div>';
+  if(s.intelScore!=null)html+='<div class="hiMetric"><div class="hiMetricLabel">智能得分</div><div class="hiMetricValue">'+fmt(s.intelScore)+'/100</div></div>';
+  html+='</div>';
+  html+='<div class="hiActions"><button class="viewBtn secondary small" data-id="'+r.id+'">查看详情</button><button class="retestBtn small" data-id="'+r.id+'" data-url="'+escapeHtml(r.url)+'" data-model="'+escapeHtml(r.model||'')+'">重测</button><button class="copyCfgBtn secondary small" data-url="'+escapeHtml(r.url)+'" data-model="'+escapeHtml(r.model||'')+'">复制配置</button><button class="selectBtn small '+(isSel?'danger':'secondary')+'" data-id="'+r.id+'">'+(isSel?'取消选中':'选中对比')+'</button><button class="delBtn danger small" data-id="'+r.id+'">删除</button></div>';
+  html+='</div>';
+ });
+ list.innerHTML=html;
+
+ list.querySelectorAll('.viewBtn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();viewHistory(b.dataset.id)})});
+ list.querySelectorAll('.delBtn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();deleteHistory(b.dataset.id)})});
+ list.querySelectorAll('.selectBtn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();toggleSelect(b.dataset.id)})});
+ list.querySelectorAll('.retestBtn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();retestFromHistory(b.dataset.url,b.dataset.model)})});
+ list.querySelectorAll('.copyCfgBtn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();copyConfig(b.dataset.url,b.dataset.model)})});
+ list.querySelectorAll('.historyItem').forEach(function(it){it.addEventListener('click',function(){viewHistory(it.dataset.id)})});
+ updateCompareBtn();
+}
+
+function retestFromHistory(url,model){
+ document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+ document.querySelectorAll('.tabPanel').forEach(function(x){x.classList.remove('active')});
+ document.querySelector('.tab[data-tab="run"]').classList.add('active');
+ el('runPanel').classList.add('active');
+ if(url)el('url').value=url;
+ if(model)el('model').value=model;
+ if(!el('key').value.trim()){
+  el('status').innerHTML='<div class="warn">已填回 URL 和模型。API Key 不会保存，请在下方填写后再点「开始完整测试」。</div>';
+  el('key').focus();
+ }else{
+  el('status').innerHTML='<div class="status">已填回 URL 和模型，Key 已存在，可直接开始测试。</div>';
+ }
+ el('reportCard').style.display='none';
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function copyConfig(url,model){
+ navigator.clipboard.writeText('Base URL: '+url+'\n模型: '+(model||'-')).then(function(){
+  alert('已复制配置（URL + 模型）到剪贴板。\n注意：出于安全，API Key 不会保存或复制。')
+ })
+}
+
+function loadHistory(){
+ fetch('/api/history').then(function(r){return r.json()}).then(renderHistory).catch(function(e){el('historyList').innerHTML='<div class="warn">加载失败: '+escapeHtml(e.message)+'</div>'})
+}
+
+function toggleSelect(id){
+ if(selectedHistory.has(id))selectedHistory.delete(id);else selectedHistory.add(id);
+ if(selectedHistory.size>2){var first=Array.from(selectedHistory)[0];selectedHistory.delete(first)}
+ loadHistory()
+}
+
+function updateCompareBtn(){
+ var btn=el('compareBtn');
+ btn.textContent='对比选中 ('+selectedHistory.size+')';
+ btn.disabled=selectedHistory.size!==2
+}
+
+function viewHistory(id){
+ fetch('/api/history/'+id).then(function(r){return r.json()}).then(function(record){
+  var body='<h3>'+escapeHtml(record.model)+' <span style="color:#94a3b8;font-weight:400;font-size:13px">@ '+escapeHtml(record.url)+'</span></h3>';
+  body+='<div class="hint">'+fmtTime(record.timestamp)+' · 用时 '+fmt(record.duration)+' ms</div>';
+  var s=record.summary||{},sc=s.scorecard||{};
+  if(sc.total!=null){
+   var ringCls=sc.total>=85?'good':(sc.total>=65?'warn':(sc.total>=40?'warn':'bad'));
+   var tag=(sc.grade||{}).tag||'';
+   body+='<div class="overview" style="margin-top:12px"><div class="scoreRing '+ringCls+'">'+sc.total+'<small>/100</small></div><div class="overviewMeta"><span class="overviewTag '+ringCls+'">'+escapeHtml(tag)+'</span><div class="overviewVerdict">'+escapeHtml(sc.verdict||'')+'</div></div></div>';
+  }
+  body+='<h2 class="section-title">速度</h2><div class="grid">';
+  if(s.streamTtfb!=null)body+=stat('流式 TTFB',fmt(s.streamTtfb)+' ms');
+  if(s.streamTps!=null)body+=stat('流式 Token/s',fmt(s.streamTps));
+  if(s.streamTotal!=null)body+=stat('流式总耗时',fmt(s.streamTotal)+' ms');
+  if(s.streamWindow!=null)body+=stat('流式窗口',fmt(s.streamWindow)+' ms');
+  if(s.longTime!=null)body+=stat('非流式总耗时',fmt(s.longTime)+' ms');
+  if(s.repeatIdenticalRate!=null)body+=stat('重复一致率',fmt(s.repeatIdenticalRate)+'%');
+  body+='</div>';
+  if(s.anomalies&&s.anomalies.length){body+='<h2 class="section-title">异常</h2>'+(s.anomalies.map(function(x){return '<div class="warn">'+escapeHtml(x)+'</div>'}).join(''))}else{body+='<div class="good">未发现明显的伪流式或缓存异常。</div>'}
+  if(s.intelScore!=null){body+='<h2 class="section-title">智能化</h2><div>得分 '+fmt(s.intelScore)+'/100，模型类型 '+escapeHtml(s.modelType||'未知')+'</div>'}
+  body+='<h2 class="section-title">详细原始数据</h2><pre>'+escapeHtml(JSON.stringify(record.fullReport,null,2))+'</pre>';
+  body+='<div class="report"><button id="modalDownload" class="small">下载此报告</button><button id="modalAiEval" class="small secondary">由 AI 点评</button></div>';
+  body+='<h2 class="section-title">AI 点评</h2><div id="modalAiEvalResult"><div class="hint">点击上方「由 AI 点评」可让另一个大模型以自然语言解读这份测试数据。需要填写一个点评用的 API。</div></div>';
+
+  el('modalBody').innerHTML=body;
+  el('modalDownload').addEventListener('click',function(){
+   var blob=new Blob([JSON.stringify(record,null,2)],{type:'application/json'}),a=document.createElement('a');
+   a.href=URL.createObjectURL(blob);a.download='api-test-'+record.id+'.json';a.click();URL.revokeObjectURL(a.href)
+  });
+  el('modalAiEval').addEventListener('click',function(){requestEvaluation(record,el('modalAiEvalResult'))});
+  el('modal').classList.add('open');
+ }).catch(function(e){alert('加载失败: '+e.message)})
+}
+
+function deleteHistory(id){
+ if(!confirm('删除这条记录？'))return;
+ fetch('/api/history/'+id,{method:'DELETE'}).then(function(){selectedHistory.delete(id);loadHistory()})
+}
+
+function requestEvaluation(record, targetEl){
+ var saved=localStorage.getItem('aiEvalConfig');
+ var cfg=saved?JSON.parse(saved):null;
+ var html='<div class="card" style="background:#0b1220;margin-top:6px">';
+ html+='<div class="hint" style="margin-bottom:8px">请配置点评用的 API（建议用一个你信任的、健康的模型，例如 Claude/官方 GLM）。点击保存后下次自动填充。</div>';
+ html+='<label>点评用 Base URL</label><input id="evUrl" value="'+(cfg&&cfg.url||'')+'" placeholder="https://example.com/v1" />';
+ html+='<label>点评用 API Key</label><input id="evKey" type="password" value="'+(cfg&&cfg.key||'')+'" placeholder="sk-xxx" />';
+ html+='<label>点评用模型 ID</label><input id="evModel" value="'+(cfg&&cfg.model||'')+'" placeholder="MiniMax-M3 或 glm-5.2" />';
+ html+='<div style="display:flex;gap:8px;margin-top:10px">';
+ html+='<button id="evSave" class="secondary small">保存配置</button>';
+ html+='<button id="evSubmit">开始 AI 点评</button>';
+ html+='</div></div>';
+ html+='<div id="evOutput"></div>';
+ targetEl.innerHTML=html;
+ el('evSave').addEventListener('click',function(){
+  var c={url:el('evUrl').value.trim(),key:el('evKey').value.trim(),model:el('evModel').value.trim()};
+  localStorage.setItem('aiEvalConfig',JSON.stringify(c));
+  el('evSave').textContent='已保存'
+ });
+ el('evSubmit').addEventListener('click',function(){
+  var url=el('evUrl').value.trim(),key=el('evKey').value.trim(),model=el('evModel').value.trim();
+  if(!url||!key||!model){el('evOutput').innerHTML='<div class="warn">请填写点评用的所有字段</div>';return}
+  el('evSubmit').disabled=true;
+  el('evOutput').innerHTML='<div class="status">正在调用点评用 API，预计 5-30 秒...</div>';
+  fetch('/api/ai-evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:record,evaluatorUrl:url,evaluatorKey:key,evaluatorModel:model})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+   if(!d.ok){
+    el('evOutput').innerHTML='<div class="warn">点评失败：'+(d.error||'未知错误')+'<br><pre style="margin-top:8px;background:#020617;padding:10px;border-radius:6px;font-size:11px">'+escapeHtml((d.body||d.message||'').substring(0,500))+'</pre></div>';
+    return;
+   }
+   el('evOutput').innerHTML=
+    '<div style="margin-top:10px;padding:14px;background:#020617;border-radius:8px;line-height:1.7">'+
+    escapeHtml(d.evaluation).replace(/\n/g,'<br>')+
+    '</div>'+
+    '<div class="hint" style="margin-top:8px">由 <b>'+escapeHtml(d.evaluatorModel)+'</b> 生成，'+(d.tokens?'共 '+d.tokens+' tokens, ':'')+'耗时 '+fmt(d.took)+' ms</div>';
+  })
+  .catch(function(e){el('evOutput').innerHTML='<div class="warn">网络错误：'+escapeHtml(e.message)+'</div>'})
+  .finally(function(){el('evSubmit').disabled=false})
+ });
+}
+
+el('modalClose').addEventListener('click',function(){el('modal').classList.remove('open')});
+el('modal').addEventListener('click',function(e){if(e.target===el('modal'))el('modal').classList.remove('open')});
+
+el('refreshHist').addEventListener('click',loadHistory);
+el('clearHist').addEventListener('click',function(){
+ if(!confirm('清空所有历史记录？此操作不可恢复。'))return;
+ fetch('/api/history',{method:'DELETE'}).then(function(){selectedHistory.clear();loadHistory()})
+});
+
+el('compareBtn').addEventListener('click',function(){
+ if(selectedHistory.size!==2)return;
+ var ids=Array.from(selectedHistory);
+ Promise.all(ids.map(function(id){return fetch('/api/history/'+id).then(function(r){return r.json()})})).then(function(records){
+  var a=records[0].summary||{},b=records[1].summary||{};
+  var rows=[
+   {k:'streamTtfb',la:'流式 TTFB',left:a.streamTtfb,right:b.streamTtfb,unit:'ms',lower:true},
+   {k:'streamTps',la:'流式 Token/s',left:a.streamTps,right:b.streamTps,unit:'',lower:false},
+   {k:'streamWindow',la:'流式窗口',left:a.streamWindow,right:b.streamWindow,unit:'ms',lower:false},
+   {k:'streamChunks',la:'Chunk 数',left:a.streamChunks,right:b.streamChunks,unit:'',lower:false},
+   {k:'longTime',la:'非流式耗时',left:a.longTime,right:b.longTime,unit:'ms',lower:true},
+   {k:'repeatIdenticalRate',la:'重复一致率',left:a.repeatIdenticalRate,right:b.repeatIdenticalRate,unit:'%',lower:true},
+   {k:'intelScore',la:'智能得分',left:a.intelScore,right:b.intelScore,unit:'/100',lower:false}
+  ];
+  var html='<h3>对比报告</h3><div class="hint">左侧为较早的测试，右侧为较晚的测试</div>';
+  html+='<div class="compareRow"><div class="compareCol"><h4>'+escapeHtml(modelShort(records[0].model))+' @ '+fmtTime(records[0].timestamp)+'</h4>';
+  html+='<div class="hint">'+escapeHtml(urlShort(records[0].url))+'</div></div>';
+  html+='<div class="compareCol"><h4>'+escapeHtml(modelShort(records[1].model))+' @ '+fmtTime(records[1].timestamp)+'</h4>';
+  html+='<div class="hint">'+escapeHtml(urlShort(records[1].url))+'</div></div></div>';
+  html+='<div style="margin-top:14px">';
+  rows.forEach(function(r){
+   var l=r.left,r2=r.right;
+   var lCls='',rCls='';
+   if(typeof l==='number'&&typeof r2==='number'){
+    if(r.lower){if(l<r2){lCls='good';rCls='bad'}else if(l>r2){lCls='bad';rCls='good'}}
+    else{if(l>r2){lCls='good';rCls='bad'}else if(l<r2){lCls='bad';rCls='good'}}
+   }
+   html+='<div class="compareMetric"><span class="'+lCls+'">'+fmt(l)+(r.unit||'')+'</span><span style="color:#94a3b8">'+r.la+'</span><span class="'+rCls+'">'+fmt(r2)+(r.unit||'')+'</span></div>';
+  });
+  html+='</div>';
+  el('modalBody').innerHTML=html;
+  el('modal').classList.add('open');
+ })
+});
+
+loadHistory();
+})();
+</script>
+</body>
+</html>

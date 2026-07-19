@@ -1,0 +1,51 @@
+{
+  "name": "api-speed-tester",
+  "version": "1.0.0",
+  "description": "中转 API 全面测试工具 - 桌面版",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:mac-dmg": "electron-builder --mac dmg",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.0",
+    "fastify": "^5.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.local.api-speed-tester",
+    "productName": "中转API测试",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "server/**/*",
+      "web/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": "portable"
+    }
+  }
+}
